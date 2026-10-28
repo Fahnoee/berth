@@ -5,6 +5,7 @@ package scan
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -85,6 +86,7 @@ func Scan(opts Options) ([]Entry, error) {
 	now := time.Now()
 	uid := os.Getuid()
 	self := os.Getpid()
+	ignore := ignorePatterns()
 
 	var entries []Entry
 	byPGID := map[int]int{} // tracked pgid -> index in entries
@@ -145,6 +147,9 @@ func Scan(opts Options) ([]Entry, error) {
 		if !opts.AllUsers && info.UID != uid {
 			continue
 		}
+		if ignored(ignore, info) {
+			continue
+		}
 		// Children of a tracked process group fold into their parent row.
 		if i, ok := trackedOwner(info, byPGID); ok {
 			entries[i].Ports = append(entries[i].Ports, ports...)
@@ -194,6 +199,29 @@ func trackedOwner(info proc.Info, byPGID map[int]int) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// ignorePatterns reads BERTH_IGNORE: comma-separated executable names or
+// globs (e.g. "postgres,docker-*") for untracked listeners to hide.
+func ignorePatterns() []string {
+	var out []string
+	for _, n := range strings.Split(os.Getenv("BERTH_IGNORE"), ",") {
+		if n = strings.TrimSpace(n); n != "" {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+func ignored(patterns []string, info proc.Info) bool {
+	for _, pat := range patterns {
+		for _, name := range []string{info.Name, info.Exe()} {
+			if ok, _ := path.Match(pat, name); ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // orphaned reports whether a process was reparented to init or to a

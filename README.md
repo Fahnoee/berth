@@ -2,6 +2,8 @@
 
 **Stable ports and process hygiene for coding agents and git worktrees.**
 
+![berth demo: per-worktree ports, berth run, berth ls, and reaping abandoned servers in the dashboard](demo/demo.gif)
+
 Run three agents in three worktrees and they all reach for `:3000`. Two of them
 crash with `EADDRINUSE`; the third "fixes" it by killing the other's server.
 An hour later you have six `vite` processes, a `uvicorn` from a worktree you
@@ -122,6 +124,7 @@ before starting anything, and `berth stop --here` when you're done.
 | `BERTH_HOME`                      | `$XDG_STATE_HOME/berth` or `~/.local/state/berth` |
 | `BERTH_PORT_MIN`/`BERTH_PORT_MAX` | `20000`–`29999` (below the ephemeral range) |
 | `BERTH_AGENTS`                    | extra agent executable names          |
+| `BERTH_IGNORE`                    | untracked executables to hide, e.g. `postgres,docker-proxy` |
 
 ## License
 
